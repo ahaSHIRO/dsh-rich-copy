@@ -1,0 +1,6 @@
+# dsh-ets-highlight bundle 层:安装后自动应用。
+# 插入一行插件记录,宿主侧挂载空插件(本插件全部工作在浏览器侧),
+# 浏览器侧由 client-modules 扫描 dsh.client 声明,把 lib/client.js 送入页面。
+- insert:
+    - id: ets-highlight-rich-copy
+      name: 'ets-highlight-rich-copy'

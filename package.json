@@ -1,0 +1,46 @@
+{
+  "name": "ets-highlight-rich-copy",
+  "version": "0.1.0",
+  "private": false,
+  "description": "DSH client plugin — ArkTS/ETS syntax highlighting for code blocks (Shiki + ohosvscode/arkTS TextMate grammar) and one-click rich-text copy that preserves colors in Snipaste and similar tools.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "lib",
+    "cordis.patch.yml"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/ahaSHIRO/ets-highlight-rich-copy",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ahaSHIRO/ets-highlight-rich-copy.git"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "arkts",
+    "ets",
+    "harmonyos",
+    "syntax-highlight",
+    "shiki",
+    "rich-text",
+    "clipboard",
+    "snipaste"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
+    }
+  }
+}
