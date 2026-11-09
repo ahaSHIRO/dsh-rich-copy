@@ -1,4 +1,4 @@
-# ets-highlight-rich-copy
+# dsh-rich-copy
 
 A client plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH) — does two things:
 
@@ -21,7 +21,7 @@ Prerequisite: a DSH web profile (lives at `~/.dsh/profiles/web`).
 ### Option A — `link:` install (recommended for development)
 
 ```bash
-dsh plugin --profile web add link:https://github.com/ahaSHIRO/ets-highlight-rich-copy
+dsh plugin --profile web add link:https://github.com/ahaSHIRO/dsh-rich-copy
 ```
 
 Restart `dsh web` afterwards.
@@ -30,8 +30,8 @@ Restart `dsh web` afterwards.
 
 ```bash
 mkdir -p ~/.dsh/profiles/web/node_modules
-git clone https://github.com/ahaSHIRO/ets-highlight-rich-copy.git \
-  ~/.dsh/profiles/web/node_modules/ets-highlight-rich-copy
+git clone https://github.com/ahaSHIRO/dsh-rich-copy.git \
+  ~/.dsh/profiles/web/node_modules/dsh-rich-copy
 ```
 
 Then add it to `dsh.profile.bundles` in `~/.dsh/profiles/web/package.json` (the `dsh plugin` command above does this for you).
@@ -62,12 +62,12 @@ After restart, any fenced code block tagged `arkts` or `ets` is highlighted auto
 | 3 | It lazily loads Shiki + the ArkTS grammar from esm.sh and rewrites the block's `innerHTML` with highlighted tokens. |
 | 4 | A capture-phase `copy` listener intercepts every copy: it attaches the cloned selection to the live document, calls `getComputedStyle` to resolve `var(...)` / `light-dark(...)` to literal `rgb(...)`, then writes self-contained `text/html` + `text/plain` to the clipboard. |
 
-Debug hook: `window.etsHighlightRichCopy.rescan()` in the console forces a re-scan.
+Debug hook: `window.dshRichCopy.rescan()` in the console forces a re-scan.
 
 ## Project layout
 
 ```
-ets-highlight-rich-copy/
+dsh-rich-copy/
 ├── package.json          # dsh.bundle.patch + dsh.client declaration
 ├── cordis.patch.yml      # inserts the plugin row
 ├── index.js              # Loader shim (forwards to lib/index.js)

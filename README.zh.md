@@ -1,4 +1,4 @@
-# ets-highlight-rich-copy
+# dsh-rich-copy
 
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH) 的客户端插件,做两件事:
 
@@ -21,7 +21,7 @@
 ### 方式一 —— `link:` 安装(推荐)
 
 ```bash
-dsh plugin --profile web add link:https://github.com/ahaSHIRO/ets-highlight-rich-copy
+dsh plugin --profile web add link:https://github.com/ahaSHIRO/dsh-rich-copy
 ```
 
 之后重启 `dsh web`。
@@ -30,8 +30,8 @@ dsh plugin --profile web add link:https://github.com/ahaSHIRO/ets-highlight-rich
 
 ```bash
 mkdir -p ~/.dsh/profiles/web/node_modules
-git clone https://github.com/ahaSHIRO/ets-highlight-rich-copy.git \
-  ~/.dsh/profiles/web/node_modules/ets-highlight-rich-copy
+git clone https://github.com/ahaSHIRO/dsh-rich-copy.git \
+  ~/.dsh/profiles/web/node_modules/dsh-rich-copy
 ```
 
 然后把它加入 `~/.dsh/profiles/web/package.json` 的 `dsh.profile.bundles`(上面的 `dsh plugin` 命令会自动完成)。
@@ -62,12 +62,12 @@ git clone https://github.com/ahaSHIRO/ets-highlight-rich-copy.git \
 | 3 | 从 esm.sh 懒加载 Shiki + ArkTS 语法,用高亮后的 token 重写该代码块的 `innerHTML`。 |
 | 4 | 捕获阶段的 `copy` 监听器拦截每次复制:把克隆的选区挂载到真实 DOM,用 `getComputedStyle` 将 `var(...)` / `light-dark(...)` 解析为字面 `rgb(...)`,然后向剪贴板写入自包含的 `text/html` + `text/plain`。 |
 
-调试入口:控制台执行 `window.etsHighlightRichCopy.rescan()` 强制重新扫描。
+调试入口:控制台执行 `window.dshRichCopy.rescan()` 强制重新扫描。
 
 ## 项目结构
 
 ```
-ets-highlight-rich-copy/
+dsh-rich-copy/
 ├── package.json          # dsh.bundle.patch + dsh.client 声明
 ├── cordis.patch.yml      # 插入插件行
 ├── index.js              # Loader 垫片(转发到 lib/index.js)
