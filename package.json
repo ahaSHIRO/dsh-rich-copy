@@ -1,6 +1,6 @@
 {
   "name": "dsh-rich-copy",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": false,
   "description": "DSH client plugin — ArkTS/ETS syntax highlighting for code blocks (Shiki + ohosvscode/arkTS TextMate grammar) and one-click rich-text copy (any language) that preserves colors in Snipaste and similar tools.",
   "type": "module",
