@@ -32,7 +32,7 @@ body[data-ds-dark-theme]{
       <span>kotlin</span>
       <button type="button" id="codeCopy" aria-label="复制">复制</button>
     </div>
-    <pre><code id="codeEl"><span class="line"><span style="color:var(--shiki-token-keyword)">class</span> <span style="color:var(--shiki-token-function)">Foo</span> { val s = <span style="color:var(--shiki-token-string)">"hi"</span> }</span></code></pre>
+    <pre><code id="codeEl"><span class="line"><span style="color:var(--shiki-token-keyword)">class</span> <span style="color:var(--shiki-token-function)">Foo</span> { val s = <span style="color:var(--shiki-token-string)">"hi"</span> }</span><span class="line"><span style="color:var(--shiki-undefined-token)"> { }</span></span></code></pre>
   </div>
 
   <div data-diff="" id="diffBlock">
@@ -46,6 +46,23 @@ body[data-ds-dark-theme]{
       <button type="button" id="expandBtn" aria-expanded="false">... 其余 1 行</button>
       <div class="_line_x _add_x">class Foo(val a: Int, val b: Int)</div>
       <div class="_line_x _context_x">}</div>
+    </div>
+  </div>
+
+  <!-- 宿主真实结构: 共享 banner N4, 换行按钮带 aria-pressed, 复制按钮是 SVG 图标且被 tooltip cloneElement -->
+  <div class="_card_a1 _block_b2" data-diff="" data-code-wrap="" id="diffBlockReal">
+    <div class="_header_c3" data-code-block-banner="true">
+      <div class="_heading_d4"><span class="_language_e5">kotlin</span></div>
+      <div class="_actions_f6">
+        <button type="button" class="_action_g7" aria-label="自动换行" aria-pressed="false" id="realWrap"><svg width="14" height="14"></svg></button>
+        <button type="button" class="_action_g7" aria-label="复制" aria-describedby="tip-real" id="realCopy"><svg width="14" height="14" id="realCopySvg"><path></path></svg></button>
+      </div>
+    </div>
+    <div class="_body_h8" id="realBody">
+      <div class="_line_i9 _path_j0">a/Foo.kt</div>
+      <div class="_line_i9 _del_k1">class Foo(val a: Int)</div>
+      <div class="_line_i9 _add_l2">class Foo(val a: Int, val b: Int)</div>
+      <div class="_line_i9 _context_m3">}</div>
     </div>
   </div>
 
@@ -65,13 +82,21 @@ window.__ModuleLoader__ = { load: function (m) { window.__plugin = m.factory(); 
   var capturedHtml = "";
   var capturedText = "";
   var disposeFn = null;
+  // 剪贴板最终状态: 宿主 Wo(writeText) 与我们的 execCommand 都写这里.
+  var clipboardState = { html: "", text: "" };
 
   function check(name, cond, detail) {
     results.push({ name: name, pass: !!cond, detail: detail === undefined ? "" : String(detail) });
   }
 
   // 写入侧不注入替身: 只观察 copy 事件里 clipboardData 被写入的内容.
-  var nativeWriteText = function () { return Promise.resolve(); };
+  // nativeWriteText 模拟宿主 Wo(): 未被抑制时会把纯文本写进剪贴板.
+  var nativeWriteText = function (t) {
+    // writeText 会替换整个剪贴板, 富文本表示随之清空(与真实浏览器一致).
+    clipboardState.html = "";
+    clipboardState.text = String(t);
+    return Promise.resolve();
+  };
   Object.defineProperty(navigator, "clipboard", {
     configurable: true,
     value: {
@@ -93,8 +118,18 @@ window.__ModuleLoader__ = { load: function (m) { window.__plugin = m.factory(); 
     var ev = new ClipboardEvent("copy", { clipboardData: dt, bubbles: true, cancelable: true });
     document.body.dispatchEvent(ev);
     lastClip = { html: dt.getData("text/html") || "", text: dt.getData("text/plain") || "" };
+    if (lastClip.html || lastClip.text) {
+      clipboardState.html = lastClip.html;
+      clipboardState.text = lastClip.text;
+    }
     return true;
   };
+
+  // 宿主复制按钮的 onClick (bubble 阶段) 调用 Wo(text) -> navigator.clipboard.writeText.
+  function hostCopy(text) { return navigator.clipboard.writeText(text); }
+  document.getElementById("codeCopy").addEventListener("click", function () { hostCopy("HOST CODE TEXT"); });
+  document.getElementById("diffCopy").addEventListener("click", function () { hostCopy("HOST DIFF TEXT"); });
+  document.getElementById("realCopy").addEventListener("click", function () { hostCopy("HOST REAL DIFF TEXT"); });
 
   var dbody = document.getElementById("diffBody");
   var expandBtn = document.getElementById("expandBtn");
@@ -116,6 +151,8 @@ window.__ModuleLoader__ = { load: function (m) { window.__plugin = m.factory(); 
     lastClip = null;
     capturedHtml = "";
     capturedText = "";
+    clipboardState.html = "";
+    clipboardState.text = "";
     document.getElementById(id).dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
   }
 
@@ -147,13 +184,90 @@ window.__ModuleLoader__ = { load: function (m) { window.__plugin = m.factory(); 
       check("T2 diff plain has all rows", dt2.split("\n").length >= 5, dt2.split("\n").length + " lines");
       check("T2 diff plain has +/- prefixes", dt2.indexOf("- ") >= 0 && dt2.indexOf("+ ") >= 0);
 
+      // T7 真实宿主必然存在 React fiber: fullDiffRows 返回全量行, 走 buildFullDiffFragmentFromFiber 分支.
+      // 用户症状: 点 diff 复制按钮后剪贴板完全没写入, 而选中复制正常.
+      var probeRows = [
+        { kind: "path", text: "a/Foo.kt" },
+        { kind: "del", text: "class Foo(val a: Int)" },
+        { kind: "add", text: "class Foo(val a: Int, val b: Int)" },
+        { kind: "add", text: "    val middle = a + b" },
+        { kind: "gap", text: "..." },
+        { kind: "context", text: "}" }
+      ];
+      document.getElementById("diffBlock").__reactFiber$probe = {
+        memoizedState: { memoizedState: [probeRows], next: null },
+        return: null
+      };
+      click("diffCopy");
+      var fh = lastClip ? lastClip.html : capturedHtml;
+      var ft = lastClip ? lastClip.text : capturedText;
+      check("T7 fiber path writes clipboard", (fh + ft).length > 0, "html=" + fh.length + " text=" + ft.length);
+      check("T7 fiber path html has diff rows", fh.indexOf("Foo") >= 0, fh.slice(0, 120));
+
+      // T8 脏 fiber 数据: 曾让 diff 分支在参数求值处抛错并降级成纯文本,
+      // 而 suppressHostWrite 已吞掉宿主 writeText, 剪贴板必须仍有内容.
+      var badRows = [
+        { kind: "path", text: "a/Foo.kt" },
+        null,
+        { kind: "add", text: "x" }
+      ];
+      document.getElementById("diffBlock").__reactFiber$probe = {
+        memoizedState: { memoizedState: [badRows], next: null },
+        return: null
+      };
+      click("diffCopy");
+      check("T8 diff button writes clipboard when construction throws",
+        (clipboardState.html + clipboardState.text).length > 0,
+        "html=" + clipboardState.html.length + " text=" + clipboardState.text.length);
+
+      // T9 宿主真实 DOM 结构: 点击 SVG 图标, 复制按钮仍须被识别并写入富文本.
+      click("realCopySvg");
+      check("T9 real host DOM diff button writes rich clipboard",
+        clipboardState.html.indexOf("Foo") >= 0 && clipboardState.text.indexOf("class") >= 0,
+        "html=" + clipboardState.html.length + " text=" + clipboardState.text.slice(0, 60));
+
+      // T10 用户症状: 点复制按钮的贴图没有高亮, 鼠标选中复制的有.
+      // 无论脏数据还是写入失败, 都不能让宿主纯文本覆盖富文本表示.
+      var badRows2 = [
+        { kind: "path", text: "a/Foo.kt" },
+        null,
+        { kind: "add", text: "x" }
+      ];
+      document.getElementById("diffBlock").__reactFiber$probe = {
+        memoizedState: { memoizedState: [badRows2], next: null },
+        return: null
+      };
+      click("diffCopy");
+      check("T10 diff button keeps highlight when construction throws",
+        /color:\s*rgb\(/.test(clipboardState.html) || clipboardState.html.indexOf("+ </span>") >= 0,
+        "html=" + clipboardState.html.slice(0, 120));
+
+      // T11 脏 fiber 数据应被就地容错, 不再触发复制构造降级.
+      var dbg = window.dshRichCopy.diffDebug();
+      check("T11 dirty fiber rows do not trigger copy fallback",
+        String(dbg.lastError || "").indexOf("diff 复制构造失败") === -1,
+        "lastError=" + dbg.lastError);
+
+      // T12 真实 web 版宿主没有定义 --shiki-foreground 等变量: 变量与 palette
+      // 兜底双双失败时, 必须用外壳实色前景兜底; 残留 var() 会让粘贴目标
+      // (Word/QQ 等)把无 token 色的标点渲染成默认黑字, 深色背景下不可读.
+      click("codeCopy");
+      var h12 = lastClip ? lastClip.html : capturedHtml;
+      check("T12 undefined color var falls back to shell solid",
+        h12.indexOf("var(") === -1 && h12.indexOf("rgb(17, 17, 17)") >= 0,
+        h12.slice(0, 160));
+
       // T3 空围栏止血: 空 .genui-dom-fence 的 childElementCount 应为 1, 真实子节点仍为 0
       var fence = document.getElementById("fence");
       check("T3 fence guard active", fence.childElementCount === 1, "count=" + fence.childElementCount);
       check("T3 fence has no real children", fence.children.length === 0);
 
-      // T4 宿主写入不被覆盖: writeText 在抑制窗口内被调用不应改写我们的 HTML
-      check("T4 writeText suppressed", true);
+      // T4 宿主写入不被覆盖: 同一次点击里宿主按钮处理器紧随其后调用 writeText,
+      // 抑制窗口必须吞掉它, 剪贴板保持我们的富文本不变.
+      click("codeCopy");
+      check("T4 writeText swallowed inside window",
+        clipboardState.html.length > 0 && clipboardState.text !== "HOST CODE TEXT",
+        "html=" + clipboardState.html.length + " text=" + JSON.stringify(clipboardState.text.slice(0, 40)));
 
       // T5 明暗切换后变量缓存必须失效 (L0.5 修复目标, 基线为红)
       click("codeCopy");
@@ -164,16 +278,67 @@ window.__ModuleLoader__ = { load: function (m) { window.__plugin = m.factory(); 
       check("T5 cssVarCache invalidates on theme change", light !== dark && /rgb\(255, 123, 114\)/.test(dark), "lightEqDark=" + (light === dark));
       document.body.removeAttribute("data-ds-dark-theme");
 
-      // T6 dispose 必须恢复所有副作用 (L0.5 修复目标, 基线为红)
-      var fenceBefore = Object.prototype.hasOwnProperty.call(fence, "childElementCount");
-      if (disposeFn) disposeFn();
-      var restored = navigator.clipboard.writeText === nativeWriteText;
-      var getterGone = !Object.prototype.hasOwnProperty.call(fence, "childElementCount");
-      check("T6 dispose restores writeText", restored);
-      check("T6 dispose removes childElementCount getter", getterGone, "ownPropBefore=" + fenceBefore);
-      check("T6 dispose callable", typeof disposeFn === "function");
+      // T13 抑制窗口到期恢复: 窗口过后宿主 writeText 必须恢复真实写入.
+      // 真实症状: 消息"复制"按钮(宿主自己的 writeText 路径)全体静默失效 —
+      // 若吞掉函数不随 timer 恢复, 一切宿主复制都不再落剪贴板.
+      setTimeout(function () {
+        clipboardState.html = "";
+        clipboardState.text = "";
+        navigator.clipboard.writeText("HOST-MSG-AFTER-WINDOW");
+        check("T13 writeText restored after window",
+          navigator.clipboard.writeText === nativeWriteText && clipboardState.text === "HOST-MSG-AFTER-WINDOW",
+          "text=" + JSON.stringify(clipboardState.text));
 
-      finish();
+        // T14 HMR 热重载泄漏(桌面真实症状的根因): 宿主的 client-hmr 每 500ms
+        // 轮询插件文件, 热重载新模块但不 dispose 旧实例, 旧 click 监听器泄漏,
+        // 双实例在同一次点击里各开一次抑制窗. 后一个实例会把前一个实例的吞掉
+        // 函数误存成"原件", timer 恢复时写回吞掉函数 -> 宿主消息复制永久静默失效.
+        var s = document.createElement("script");
+        s.src = "../lib/client.js";
+        s.onerror = function () {
+          check("T14 message copy survives HMR double-instance", false, "second module load failed");
+          finishAll(null);
+        };
+        s.onload = function () {
+          var inst2 = window.__plugin;
+          var dispose2 = null;
+          var ctx2 = { on: function (name, cb) { if (name === "dispose") dispose2 = cb; } };
+          inst2.apply(ctx2);
+          click("codeCopy");
+          setTimeout(function () {
+            clipboardState.html = "";
+            clipboardState.text = "";
+            navigator.clipboard.writeText("HOST-MSG-AFTER-HMR");
+            check("T14 message copy survives HMR double-instance",
+              navigator.clipboard.writeText === nativeWriteText && clipboardState.text === "HOST-MSG-AFTER-HMR",
+              "wt=" + (navigator.clipboard.writeText === nativeWriteText ? "native" : "swallow") + " text=" + JSON.stringify(clipboardState.text));
+            finishAll(dispose2);
+          }, 400);
+        };
+        document.head.appendChild(s);
+
+        function finishAll(dispose2) {
+          // T6 dispose 必须恢复所有副作用 (L0.5 修复目标, 基线为红); 双实例都要回收.
+          var fenceBefore = Object.prototype.hasOwnProperty.call(fence, "childElementCount");
+          if (disposeFn) disposeFn();
+          if (dispose2) dispose2();
+          var restored = navigator.clipboard.writeText === nativeWriteText;
+          var getterGone = !Object.prototype.hasOwnProperty.call(fence, "childElementCount");
+          check("T6 dispose restores writeText", restored);
+          check("T6 dispose removes childElementCount getter", getterGone, "ownPropBefore=" + fenceBefore);
+          check("T6 dispose callable", typeof disposeFn === "function");
+          if (restored) {
+            // 双实例全部回收后, 宿主消息复制必须仍然可用.
+            clipboardState.html = "";
+            clipboardState.text = "";
+            navigator.clipboard.writeText("HOST-MSG-AFTER-DISPOSE");
+            check("T14 host copy usable after both instances disposed",
+              clipboardState.text === "HOST-MSG-AFTER-DISPOSE",
+              "text=" + JSON.stringify(clipboardState.text));
+          }
+          finish();
+        }
+      }, 400);
     }, 60);
   });
 })();
