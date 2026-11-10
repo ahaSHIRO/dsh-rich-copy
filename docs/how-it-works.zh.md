@@ -21,7 +21,7 @@
 
 控制台 `window.dshRichCopy` 暴露行为指令:
 
-- `copyOnce("code")` / `copyOnce("diff")`: 触发一次 CopyTrigger 并返回 ClipboardPayload.
+- `copyOnce("code")` / `copyOnce("diff")`: 复述生产的按钮路径(识别, 构造, 开窗, 写入)并返回 `{wrote, payload}`.
 - `rescan()` / `rescanDiff()`: 强制重扫. `restart()`: 复位一次性降级标志.
 - `setDiffHighlight(on)` / `setFenceGuard(on)`: 开关.
 - `diffDebug()`: 返回状态与前 3 张 diff 卡的摘要.

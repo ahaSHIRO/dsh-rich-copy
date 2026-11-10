@@ -66,6 +66,14 @@ body[data-ds-dark-theme]{
     </div>
   </div>
 
+  <!-- 识别失败契约: 无内容容器的复制按钮, 不开窗, 宿主纯文本照常落剪贴板 -->
+  <div class="md-code-block" id="emptyBlock">
+    <div data-code-block-banner="true">
+      <span>kotlin</span>
+      <button type="button" id="emptyCopy" aria-label="复制">复制</button>
+    </div>
+  </div>
+
   <div class="genui-dom-fence" id="fence"></div>
 </div>
 
@@ -130,6 +138,7 @@ window.__ModuleLoader__ = { load: function (m) { window.__plugin = m.factory(); 
   document.getElementById("codeCopy").addEventListener("click", function () { hostCopy("HOST CODE TEXT"); });
   document.getElementById("diffCopy").addEventListener("click", function () { hostCopy("HOST DIFF TEXT"); });
   document.getElementById("realCopy").addEventListener("click", function () { hostCopy("HOST REAL DIFF TEXT"); });
+  document.getElementById("emptyCopy").addEventListener("click", function () { hostCopy("HOST EMPTY TEXT"); });
 
   var dbody = document.getElementById("diffBody");
   var expandBtn = document.getElementById("expandBtn");
@@ -248,6 +257,22 @@ window.__ModuleLoader__ = { load: function (m) { window.__plugin = m.factory(); 
         String(dbg.lastError || "").indexOf("diff 复制构造失败") === -1,
         "lastError=" + dbg.lastError);
 
+      // T15 调试入口必须复述生产路径: copyOnce 对折叠 diff 的构造与真实点击
+      // 一致(自动展开 + 全量行 + 同一返回契约), 不得自拼第三条路径.
+      delete document.getElementById("diffBlock").__reactFiber$probe;
+      expandBtn.setAttribute("aria-expanded", "false");
+      Array.prototype.forEach.call(dbody.children, function (c) {
+        if ((c.textContent || "").indexOf("middle") >= 0) c.remove();
+      });
+      var r15 = window.dshRichCopy.copyOnce("diff");
+      check("T15 copyOnce mirrors click on folded diff",
+        r15 && r15.wrote === true &&
+        r15.payload && r15.payload.html.indexOf("middle") >= 0 &&
+        expandBtn.getAttribute("aria-expanded") === "true",
+        "wrote=" + (r15 && r15.wrote) +
+        " middle=" + (r15 && r15.payload ? String(r15.payload.html.indexOf("middle")) : "none") +
+        " expanded=" + expandBtn.getAttribute("aria-expanded"));
+
       // T12 真实 web 版宿主没有定义 --shiki-foreground 等变量: 变量与 palette
       // 兜底双双失败时, 必须用外壳实色前景兜底; 残留 var() 会让粘贴目标
       // (Word/QQ 等)把无 token 色的标点渲染成默认黑字, 深色背景下不可读.
@@ -288,6 +313,13 @@ window.__ModuleLoader__ = { load: function (m) { window.__plugin = m.factory(); 
         check("T13 writeText restored after window",
           navigator.clipboard.writeText === nativeWriteText && clipboardState.text === "HOST-MSG-AFTER-WINDOW",
           "text=" + JSON.stringify(clipboardState.text));
+
+        // T16 识别失败契约: 无内容容器(pre 缺失)的复制按钮点击不开新窗,
+        // 此前窗口已过期(T13 已证 native), 宿主纯文本必须照常落剪贴板.
+        click("emptyCopy");
+        check("T16 empty block leaves host plain copy",
+          clipboardState.text === "HOST EMPTY TEXT" && clipboardState.html === "",
+          "text=" + JSON.stringify(clipboardState.text.slice(0, 40)) + " html=" + clipboardState.html.length);
 
         // T14 HMR 热重载泄漏(桌面真实症状的根因): 宿主的 client-hmr 每 500ms
         // 轮询插件文件, 热重载新模块但不 dispose 旧实例, 旧 click 监听器泄漏,

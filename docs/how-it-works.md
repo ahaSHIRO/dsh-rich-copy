@@ -20,7 +20,7 @@ The copy side is its own chapter: [Copy pipeline](./copy-pipeline.md) — payloa
 ## Debug and verification
 
 `window.dshRichCopy` exposes behaviour commands:
-- `copyOnce("code")` / `copyOnce("diff")`: trigger one CopyTrigger and return the ClipboardPayload.
+- `copyOnce("code")` / `copyOnce("diff")`: reiterate the production button path (recognition, construction, window, write) and return `{wrote, payload}`.
 - `rescan()` / `rescanDiff()`: force a rescan. `restart()`: reset one-shot degradation flags.
 - `setDiffHighlight(on)` / `setFenceGuard(on)`: toggles.
 - `diffDebug()`: state plus a summary of the first three diff cards.

@@ -43,7 +43,7 @@ dsh plugin --profile web add link:https://github.com/ahaSHIRO/dsh-rich-copy
 - 点击代码块的复制按钮或选中代码按 `Ctrl+C` → 粘贴到 Snipaste → 保留彩色.
 - 复制能力对所有语言生效;高亮增强只针对 `ets` / `arkts`.
 - diff 卡按路径后缀着色,点右上角复制后粘贴带行底色与 `+` / `-` 前缀.
-- 控制台 `window.dshRichCopy.copyOnce("code")` 可触发一次复制并返回载荷;其余指令见 [工作原理](./docs/how-it-works.zh.md).
+- 控制台 `window.dshRichCopy.copyOnce("code")` 复述生产的按钮路径(识别, 构造, 开窗, 写入)并返回 `{wrote, payload}`;其余指令见 [工作原理](./docs/how-it-works.zh.md).
 
 ## 验证
 

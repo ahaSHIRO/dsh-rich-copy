@@ -43,7 +43,7 @@ After restart, any fenced block marked `arkts` or `ets` highlights automatically
 - Click the copy button or select and press `Ctrl+C`, then paste into Snipaste — colours survive.
 - Copy works for every language; the highlighting enhancement targets `ets` / `arkts` only.
 - Diff cards are coloured by path extension; the corner copy button produces row tints and `+` / `-` prefixes.
-- `window.dshRichCopy.copyOnce("code")` in the console triggers one copy and returns the payload. See [How it works](./docs/how-it-works.md) for the other commands.
+- `window.dshRichCopy.copyOnce("code")` in the console reiterates the production button path (recognition, construction, window, write) and returns `{wrote, payload}`. See [How it works](./docs/how-it-works.md) for the other commands.
 
 ## Verify
 
