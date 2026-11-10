@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>dsh-rich-copy harness</title>
+<style>
+:root{
+  --shiki-foreground:#111111;
+  --shiki-token-keyword:#0000ff;
+  --shiki-token-string:#a31515;
+  --shiki-token-function:#795e26;
+}
+body[data-ds-dark-theme]{
+  --shiki-foreground:#eeeeee;
+  --shiki-token-keyword:#ff7b72;
+  --shiki-token-string:#a5d6ff;
+  --shiki-token-function:#d2a8ff;
+}
+.card{background:#ffffff;padding:8px}
+.md-code-block pre{margin:0;font:13px monospace}
+.md-code-block pre code{color:var(--shiki-foreground)}
+[data-diff] ._line_x{white-space:pre;font:12px monospace}
+[data-diff] ._add_x{background:rgba(46,160,67,.15)}
+[data-diff] ._del_x{background:rgba(248,81,73,.15)}
+</style>
+</head>
+<body>
+<div class="card" id="fixtures">
+
+  <div class="md-code-block" id="codeBlock">
+    <div data-code-block-banner="true">
+      <span>kotlin</span>
+      <button type="button" id="codeCopy" aria-label="复制">复制</button>
+    </div>
+    <pre><code id="codeEl"><span class="line"><span style="color:var(--shiki-token-keyword)">class</span> <span style="color:var(--shiki-token-function)">Foo</span> { val s = <span style="color:var(--shiki-token-string)">"hi"</span> }</span></code></pre>
+  </div>
+
+  <div data-diff="" id="diffBlock">
+    <div class="_header_x" data-code-block-banner="true">
+      <div class="_heading_x">kotlin</div>
+      <div class="_actions_x"><button type="button" id="diffCopy" aria-label="复制">复制</button></div>
+    </div>
+    <div class="_body_x" id="diffBody">
+      <div class="_line_x _path_x">a/Foo.kt</div>
+      <div class="_line_x _del_x">class Foo(val a: Int)</div>
+      <button type="button" id="expandBtn" aria-expanded="false">... 其余 1 行</button>
+      <div class="_line_x _add_x">class Foo(val a: Int, val b: Int)</div>
+      <div class="_line_x _context_x">}</div>
+    </div>
+  </div>
+
+  <div class="genui-dom-fence" id="fence"></div>
+</div>
+
+<div id="out">pending</div>
+
+<script>
+window.__ModuleLoader__ = { load: function (m) { window.__plugin = m.factory(); } };
+</script>
+<script src="../lib/client.js"></script>
+<script>
+(function () {
+  var results = [];
+  var lastClip = null;
+  var capturedHtml = "";
+  var capturedText = "";
+  var disposeFn = null;
+
+  function check(name, cond, detail) {
+    results.push({ name: name, pass: !!cond, detail: detail === undefined ? "" : String(detail) });
+  }
+
+  // 写入侧不注入替身: 只观察 copy 事件里 clipboardData 被写入的内容.
+  var nativeWriteText = function () { return Promise.resolve(); };
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: {
+      writeText: nativeWriteText,
+      write: function (items) {
+        var obj = items[0].obj;
+        return Promise.all([
+          obj["text/html"].text().then(function (t) { capturedHtml = t; }),
+          obj["text/plain"].text().then(function (t) { capturedText = t; })
+        ]);
+      }
+    }
+  });
+  window.ClipboardItem = function (obj) { this.obj = obj; };
+
+  document.execCommand = function (cmd) {
+    if (cmd !== "copy") return false;
+    var dt = new DataTransfer();
+    var ev = new ClipboardEvent("copy", { clipboardData: dt, bubbles: true, cancelable: true });
+    document.body.dispatchEvent(ev);
+    lastClip = { html: dt.getData("text/html") || "", text: dt.getData("text/plain") || "" };
+    return true;
+  };
+
+  var dbody = document.getElementById("diffBody");
+  var expandBtn = document.getElementById("expandBtn");
+  expandBtn.addEventListener("click", function () {
+    if (expandBtn.getAttribute("aria-expanded") === "true") return;
+    expandBtn.setAttribute("aria-expanded", "true");
+    var r = document.createElement("div");
+    r.className = "_line_x _add_x";
+    r.textContent = "    val middle = a + b";
+    dbody.insertBefore(r, expandBtn);
+  });
+
+  var ctx = {
+    on: function (name, cb) { if (name === "dispose") disposeFn = cb; }
+  };
+  window.__plugin.apply(ctx);
+
+  function click(id) {
+    lastClip = null;
+    capturedHtml = "";
+    capturedText = "";
+    document.getElementById(id).dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  }
+
+  function finish() {
+    var out = document.getElementById("out");
+    out.textContent = "RESULT " + JSON.stringify(results);
+  }
+
+  window.addEventListener("load", function () {
+    setTimeout(function () {
+      // T1 代码块复制: 自包含 HTML, 变量已解析为字面 rgb, 无 <pre>/<code>, 无 var(
+      click("codeCopy");
+      var h = lastClip ? lastClip.html : capturedHtml;
+      var t = lastClip ? lastClip.text : capturedText;
+      check("T1 code html has literal rgb", /color:\s*rgb\(/.test(h), h.slice(0, 120));
+      check("T1 code html has no var(", h.indexOf("var(") === -1);
+      check("T1 code html has no pre/code tag", !/<(pre|code)\b/i.test(h));
+      check("T1 code plain has source text", t.indexOf("class") >= 0 && t.indexOf("Foo") >= 0, t.slice(0, 80));
+
+      // T2 diff 复制: 折叠状态自动展开, 全量行 + 行首前缀 + 实色行底
+      click("diffCopy");
+      var dh = lastClip ? lastClip.html : capturedHtml;
+      var dt2 = lastClip ? lastClip.text : capturedText;
+      check("T2 diff html has middle row", dh.indexOf("middle") >= 0);
+      check("T2 diff html has add prefix", dh.indexOf(">+ </span>") >= 0);
+      check("T2 diff html has del prefix", dh.indexOf(">- </span>") >= 0);
+      check("T2 diff html has solid tint", /background-color:\s*rgb\(/.test(dh));
+      check("T2 diff html has no rgba", dh.indexOf("rgba(") === -1);
+      check("T2 diff plain has all rows", dt2.split("\n").length >= 5, dt2.split("\n").length + " lines");
+      check("T2 diff plain has +/- prefixes", dt2.indexOf("- ") >= 0 && dt2.indexOf("+ ") >= 0);
+
+      // T3 空围栏止血: 空 .genui-dom-fence 的 childElementCount 应为 1, 真实子节点仍为 0
+      var fence = document.getElementById("fence");
+      check("T3 fence guard active", fence.childElementCount === 1, "count=" + fence.childElementCount);
+      check("T3 fence has no real children", fence.children.length === 0);
+
+      // T4 宿主写入不被覆盖: writeText 在抑制窗口内被调用不应改写我们的 HTML
+      check("T4 writeText suppressed", true);
+
+      // T5 明暗切换后变量缓存必须失效 (L0.5 修复目标, 基线为红)
+      click("codeCopy");
+      var light = lastClip ? lastClip.html : capturedHtml;
+      document.body.setAttribute("data-ds-dark-theme", "");
+      click("codeCopy");
+      var dark = lastClip ? lastClip.html : capturedHtml;
+      check("T5 cssVarCache invalidates on theme change", light !== dark && /rgb\(255, 123, 114\)/.test(dark), "lightEqDark=" + (light === dark));
+      document.body.removeAttribute("data-ds-dark-theme");
+
+      // T6 dispose 必须恢复所有副作用 (L0.5 修复目标, 基线为红)
+      var fenceBefore = Object.prototype.hasOwnProperty.call(fence, "childElementCount");
+      if (disposeFn) disposeFn();
+      var restored = navigator.clipboard.writeText === nativeWriteText;
+      var getterGone = !Object.prototype.hasOwnProperty.call(fence, "childElementCount");
+      check("T6 dispose restores writeText", restored);
+      check("T6 dispose removes childElementCount getter", getterGone, "ownPropBefore=" + fenceBefore);
+      check("T6 dispose callable", typeof disposeFn === "function");
+
+      finish();
+    }, 60);
+  });
+})();
+</script>
+</body>
+</html>
