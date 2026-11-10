@@ -1,6 +1,6 @@
 # 工作原理 (dsh-rich-copy)
 
-本文是 [README.zh.md](../README.zh.md) 的分册, 描述插件在浏览器侧的实际行为. [English](./how-it-works.md). 架构决策见 [docs/adr/](./adr/).
+本文是 [README.zh.md](../README.zh.md) 的分册, 描述插件在浏览器侧的实际行为. 复制侧单独成册: [复制管线](./copy-pipeline.zh.md). [English](./how-it-works.md). 架构决策见 [docs/adr/](./adr/).
 
 ## 注入与生命周期
 
@@ -13,20 +13,9 @@
 
 主题输出恒为 `var(--shiki-*)`. 若 Shiki 缺少 `createCssVariablesTheme`, 加载直接失败并走内置分词器, 不再退回字面色主题, 避免颜色表示出现第二种形式.
 
-## 富文本复制
+## 复制管线
 
-`clipboard` 模块把 CopySource 与 CopyTrigger 收敛成 1 个 interface, 产出 `{html, text}` 两份载荷:
-
-1. 选区复制 (`Ctrl+C`) 与按钮复制走同一入口. 按钮路径先构造载荷, 再由写入侧在同步点击栈内只选中一个屏外 1 字符隐藏 span, 调用 `document.execCommand("copy")`, 由 `copyCapture` 把载荷写入 `clipboardData`. 这既保住用户手势激活态, 又绕开大选区的原生布局开销.
-2. `serializer` 让 CodeBlock 与 DiffCard 共用外壳实现: 把 `var(...)` / `light-dark(...)` 解析为字面 `rgb(...)`, 清洗字体栈, 找最近实色祖先背景, 行底半透明色叠成不透明实色, 补齐 `- ` / `+ ` / `  ` 行首前缀, 拆掉 `<pre><code>` 壳避免粘贴目标重置字体.
-3. 折叠的 diff 卡在复制时自动展开; 若 React 18 尚未异步提交, `hostAdapter` 从 fiber 同步取全量行, 保证复制内容完整.
-4. 宿主按钮紧随的 `writeText` 会在 250ms 窗口内被静默, 避免覆盖已写入的富文本, 同时保留宿主"复制成功"的图标反馈.
-
-## 防御守护
-
-`fenceGuard` 是独立 adapter: 当会话里存在 `"panel": true` 的 GenUI 围栏时, 宿主会每帧把空的 `.genui-dom-fence` 判为被清空并反复重建, 引发持续的整页重排. 该 adapter 在空容器实例上覆盖 `childElementCount` getter(真实子节点为 0 时返回 1), 不插入任何 DOM 节点, 直接切断循环. 可独立开关, `dispose` 时撤销全部 getter.
-
-宿主的内部结构知识(React fiber 私有键, 按钮属性, DOM 类名)只存在于 `hostAdapter` 的 implementation 里, 主模块不直接依赖.
+复制侧单独成册: [复制管线](./copy-pipeline.zh.md) — 载荷构造, 变量解析与实色兜底, 250ms 宿主写入抑制窗口, 以及针对 GenUI 围栏重排的防御守护.
 
 ## 调试与验证
 
@@ -52,6 +41,8 @@ dsh-rich-copy/
 ├── docs/
 │   ├── how-it-works.md       # 本文英文版
 │   ├── how-it-works.zh.md    # 本文
+│   ├── copy-pipeline.md      # 复制管线分册(英文)
+│   ├── copy-pipeline.zh.md   # 复制管线分册(中文)
 │   └── adr/                  # 架构决策
 ├── tests/
 │   ├── harness.html      # 无头 Edge 页面夹具

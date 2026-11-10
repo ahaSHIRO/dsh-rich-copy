@@ -11,7 +11,7 @@ A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH) clie
 ## Features
 
 - **Highlighting** — `struct`, `@interface`, `import lazy` and all TypeScript keywords; decorators in DevEco-style amber, following the DSH light/dark theme.
-- **Rich-text copy (all languages)** — resolves `var(--shiki-*)` / `light-dark(...)` to literal `rgb(...)`, cleans the font stack and blends translucent row tints into solid colours. The exported HTML renders correctly outside DSH.
+- **Rich-text copy (all languages)** — resolves `var(--shiki-*)` / `light-dark(...)` to literal `rgb(...)` (variables the host never defines fall back to the block's own solid colours), cleans the font stack and blends translucent row tints into solid colours. The exported HTML renders correctly outside DSH.
 - **Diff highlighting** — a built-in regex tokenizer paints rows immediately, then Shiki upgrades them in the background. Unknown extensions and blocks over 400 lines stay plain; `setDiffHighlight(false)` turns it off.
 - **Zero dependencies** — no `npm install`; Shiki is fetched from a CDN on first use.
 - **Graceful degradation** — the built-in tokenizer keeps working when the CDN is unreachable; the ArkTS enhancement is skipped silently.
@@ -56,6 +56,7 @@ Uses local headless Edge to assert copy payloads, theme switching, collapsed exp
 ## Docs
 
 - [How it works (English)](./docs/how-it-works.md) / [工作原理(中文)](./docs/how-it-works.zh.md)
+- [Copy pipeline (English)](./docs/copy-pipeline.md) / [复制管线(中文)](./docs/copy-pipeline.zh.md)
 - [GLOSSARY.md](./GLOSSARY.md) — domain terms
 - [docs/adr/](./docs/adr/) — architecture decisions
 

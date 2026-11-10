@@ -1,6 +1,6 @@
 # How it works (dsh-rich-copy)
 
-This is a chapter of [README.md](../README.md). It describes the actual browser-side behaviour. [中文](./how-it-works.zh.md). Architecture decisions live in [docs/adr/](./adr/).
+This is a chapter of [README.md](../README.md). It describes the actual browser-side behaviour. The copy side has its own chapter: [Copy pipeline](./copy-pipeline.md). [中文](./how-it-works.zh.md). Architecture decisions live in [docs/adr/](./adr/).
 
 ## Injection and lifecycle
 
@@ -13,20 +13,9 @@ This is a chapter of [README.md](../README.md). It describes the actual browser-
 
 Theme output is always `var(--shiki-*)`. If Shiki lacks `createCssVariablesTheme`, loading fails and the built-in tokenizer takes over; there is no literal-colour theme fallback, so the colour representation never has a second form.
 
-## Rich-text copy
+## Copy pipeline
 
-The `clipboard` module collapses CopySource and CopyTrigger into one interface producing an `{html, text}` payload:
-
-1. Selection copy (`Ctrl+C`) and button copy share one entry point. The button path builds the payload, then the write side selects a single off-screen one-character span inside the synchronous click stack and calls `document.execCommand("copy")`; `copyCapture` writes the payload into `clipboardData`. This keeps user activation and avoids native layout over a huge selection.
-2. `serializer` shares one shell between the CodeBlock and DiffCard adapters: resolve `var(...)` / `light-dark(...)` to literal `rgb(...)`, clean the font stack, find the nearest solid ancestor background, blend translucent row tints into solid colours, add `- ` / `+ ` / `  ` prefixes and drop the `<pre><code>` wrapper so paste targets do not reset the font.
-3. A collapsed diff card auto-expands on copy. If React 18 has not committed yet, `hostAdapter` reads the full row list from the fiber synchronously so nothing is missing.
-4. The host button's trailing `writeText` is silenced for 250ms so it cannot overwrite the rich payload, while the host's "copied" icon feedback still fires.
-
-## Defensive guard
-
-`fenceGuard` is a standalone adapter. When a session contains a GenUI fence with `"panel": true`, the host mistakes an empty `.genui-dom-fence` for a wiped container and rebuilds it every frame, causing continuous full-page reflow. The adapter overrides the `childElementCount` getter on those instances (returns 1 when the real count is 0) without inserting any DOM node, stopping the loop. It toggles independently and all getters are removed on dispose.
-
-Host internals (React fiber private keys, button attributes, DOM class names) live only inside `hostAdapter`'s implementation; the main module does not depend on them.
+The copy side is its own chapter: [Copy pipeline](./copy-pipeline.md) — payload construction, variable resolution and the solid-colour fallback, the 250ms host-write suppression window and the defensive guard against GenUI fence reflow.
 
 ## Debug and verification
 
@@ -51,6 +40,8 @@ dsh-rich-copy/
 ├── docs/
 │   ├── how-it-works.md       # this file
 │   ├── how-it-works.zh.md    # Chinese version
+│   ├── copy-pipeline.md      # copy chapter (English)
+│   ├── copy-pipeline.zh.md   # copy chapter (Chinese)
 │   └── adr/                  # architecture decisions
 ├── tests/
 │   ├── harness.html      # headless Edge fixture

@@ -11,7 +11,7 @@
 ## 功能
 
 - **高亮** : `struct`,`@interface`,`import lazy` 及所有 TypeScript 关键字着色;装饰器以 DevEco 风格亮黄渲染,跟随 DSH 明暗主题切换.
-- **富文本复制(全语言)** : 把 `var(--shiki-*)` / `light-dark(...)` 解析为字面 `rgb(...)`,清洗字体栈,行底叠成不透明实色;导出 HTML 离开 DSH 后仍能正确渲染.
+- **富文本复制(全语言)** : 把 `var(--shiki-*)` / `light-dark(...)` 解析为字面 `rgb(...)`(宿主未定义的变量退到代码块自身的实色),清洗字体栈,行底叠成不透明实色;导出 HTML 离开 DSH 后仍能正确渲染.
 - **diff 卡高亮** : 内置正则分词器立即上色,Shiki 就绪后后台升级;未知后缀或超过 400 行的块保持纯文本,可用 `setDiffHighlight(false)` 关闭.
 - **零依赖** : 无需 `npm install`;Shiki 首次使用时从 CDN 获取.
 - **优雅降级** : CDN 不可达时内置分词器继续工作,ArkTS 增强静默跳过.
@@ -56,6 +56,7 @@ node tests/run.cjs
 ## 文档
 
 - [工作原理(中文)](./docs/how-it-works.zh.md) / [How it works (English)](./docs/how-it-works.md)
+- [复制管线(中文)](./docs/copy-pipeline.zh.md) / [Copy pipeline (English)](./docs/copy-pipeline.md)
 - [GLOSSARY.md](./GLOSSARY.md) : 领域术语
 - [docs/adr/](./docs/adr/) : 架构决策
 
