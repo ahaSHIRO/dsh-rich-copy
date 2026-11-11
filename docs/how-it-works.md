@@ -9,7 +9,7 @@ This is a chapter of [README.md](../README.md). It describes the actual browser-
 ## Highlighting
 
 - **ArkTS / ETS code blocks**: the [ohosvscode/arkTS](https://github.com/ohosvscode/arkTS) TextMate grammar is bundled; [Shiki](https://shiki.style) is lazy-loaded from a CDN and `codeToHtml` rewrites `code.innerHTML`, followed by a decorator patch. If the CDN is unreachable this enhancement is skipped and the host's own highlighting is untouched.
-- **Diff cards**: the `highlighter` module has two adapters. A built-in regex tokenizer paints rows synchronously with no network; once Shiki is ready it overwrites them with more accurate tokens in the background. Language inference has one owner: the card heading wins, otherwise the first row's path extension. Unknown extensions and blocks over 400 lines stay plain.
+- **Diff cards**: the `coloring` module owns the timing: a built-in regex tokenizer paints rows synchronously with no network, and once Shiki is ready it overwrites them with more accurate tokens in the background. The `highlighter` module holds the built-in and Shiki adapters internally. Language inference has one owner: the card heading wins, otherwise the first row's path extension. Unknown extensions and blocks over 400 lines stay plain.
 
 Theme output is always `var(--shiki-*)`. If Shiki lacks `createCssVariablesTheme`, loading fails and the built-in tokenizer takes over; there is no literal-colour theme fallback, so the colour representation never has a second form.
 

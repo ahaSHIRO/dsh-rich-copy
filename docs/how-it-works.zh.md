@@ -9,7 +9,7 @@
 ## 高亮
 
 - **ArkTS / ETS 代码块**: 内置 [ohosvscode/arkTS](https://github.com/ohosvscode/arkTS) 的 TextMate 语法, 运行时从 CDN 懒加载 [Shiki](https://shiki.style), 用 `codeToHtml` 重写 `code.innerHTML`, 再补一遍装饰器着色. CDN 不可达时该增强静默跳过, 不影响宿主内置高亮.
-- **diff 卡**: `highlighter` 模块有 2 个 adapter. 内置正则分词器先同步上色(零网络), Shiki 就绪后在后台覆盖成更准的 token. 语言推断只有一个 owner, 卡片头部标签优先, 否则按首行路径后缀. 未知后缀或超过 400 行的块保持纯文本.
+- **diff 卡**: `coloring` 模块统一上色时序: 内置正则分词器先同步上色(零网络), Shiki 就绪后在后台覆盖成更准的 token; `highlighter` 内部持有内置与 Shiki 两个 adapter. 语言推断只有一个 owner, 卡片头部标签优先, 否则按首行路径后缀. 未知后缀或超过 400 行的块保持纯文本.
 
 主题输出恒为 `var(--shiki-*)`. 若 Shiki 缺少 `createCssVariablesTheme`, 加载直接失败并走内置分词器, 不再退回字面色主题, 避免颜色表示出现第二种形式.
 
