@@ -16,4 +16,4 @@
 
 `fenceGuard` 是独立 adapter: 当会话里存在 `"panel": true` 的 GenUI 围栏时, 宿主会每帧把空的 `.genui-dom-fence` 判为被清空并反复重建, 引发持续的整页重排. 该 adapter 在空容器实例上覆盖 `childElementCount` getter(真实子节点为 0 时返回 1), 不插入任何 DOM 节点, 直接切断循环. 可独立开关, `dispose` 时撤销全部 getter.
 
-宿主的内部结构知识(React fiber 私有键, 按钮属性, DOM 类名)只存在于 `hostAdapter` 的 implementation 里, 主模块不直接依赖.
+宿主的内部结构知识只存在于三个单元的 implementation 里: `hostAdapter`(React fiber 私有键, 按钮属性), `codeDom` 与 `diffDom`(容器, body, 行类型与 DOM 类名, 含双代类名兼容), 消费方只见方法不见选择器.

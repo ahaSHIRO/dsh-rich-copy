@@ -16,4 +16,4 @@ The `source` module collapses the three CopyTriggers (button, selection, debug) 
 
 `fenceGuard` is a standalone adapter. When a session contains a GenUI fence with `"panel": true`, the host mistakes an empty `.genui-dom-fence` for a wiped container and rebuilds it every frame, causing continuous full-page reflow. The adapter overrides the `childElementCount` getter on those instances (returns 1 when the real count is 0) without inserting any DOM node, stopping the loop. It toggles independently and all getters are removed on dispose.
 
-Host internals (React fiber private keys, button attributes, DOM class names) live only inside `hostAdapter`'s implementation; the main module does not depend on them.
+Host internals live only inside three units: `hostAdapter` (React fiber private keys, button attributes) and `codeDom` / `diffDom` (containers, bodies, row types and DOM class names, including the two-generation class-name compatibility); consumers see methods, never selectors.
