@@ -165,6 +165,20 @@ window.__ModuleLoader__ = { load: function (m) { window.__plugin = m.factory(); 
     document.getElementById(id).dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
   }
 
+  // 选区 CopyTrigger: 程序化 Selection + 直接 dispatch copy 事件,
+  // 走 copyCapture 的选区分支(不点按钮, 不开抑制窗).
+  function selectCopy(range) {
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    var dt = new DataTransfer();
+    var ev = new ClipboardEvent("copy", { clipboardData: dt, bubbles: true, cancelable: true });
+    document.body.dispatchEvent(ev);
+    var out = { html: dt.getData("text/html") || "", text: dt.getData("text/plain") || "" };
+    sel.removeAllRanges();
+    return out;
+  }
+
   function finish() {
     var out = document.getElementById("out");
     out.textContent = "RESULT " + JSON.stringify(results);
@@ -251,11 +265,11 @@ window.__ModuleLoader__ = { load: function (m) { window.__plugin = m.factory(); 
         /color:\s*rgb\(/.test(clipboardState.html) || clipboardState.html.indexOf("+ </span>") >= 0,
         "html=" + clipboardState.html.slice(0, 120));
 
-      // T11 脏 fiber 数据应被就地容错, 不再触发复制构造降级.
+      // T11 脏 fiber 数据应被就地容错, 不再触发复制构造降级(按 stage 断言, 不匹配文案).
       var dbg = window.dshRichCopy.diffDebug();
       check("T11 dirty fiber rows do not trigger copy fallback",
-        String(dbg.lastError || "").indexOf("diff 复制构造失败") === -1,
-        "lastError=" + dbg.lastError);
+        !dbg.lastError || dbg.lastError.stage !== "construct",
+        "lastError=" + JSON.stringify(dbg.lastError));
 
       // T15 调试入口必须复述生产路径: copyOnce 对折叠 diff 的构造与真实点击
       // 一致(自动展开 + 全量行 + 同一返回契约), 不得自拼第三条路径.
@@ -302,6 +316,31 @@ window.__ModuleLoader__ = { load: function (m) { window.__plugin = m.factory(); 
       var dark = lastClip ? lastClip.html : capturedHtml;
       check("T5 cssVarCache invalidates on theme change", light !== dark && /rgb\(255, 123, 114\)/.test(dark), "lightEqDark=" + (light === dark));
       document.body.removeAttribute("data-ds-dark-theme");
+
+      // T17/T18 选区 CopyTrigger(术语表一等公民, 此前零覆盖):
+      // 部分选区取选区文本, 完整覆盖 body 取全量 diff 文本(selectionCoversBody 边界).
+      var midRow = null;
+      var drows = dbody ? dbody.children : [];
+      for (var mi = 0; mi < drows.length; mi++) {
+        if ((drows[mi].textContent || "").indexOf("middle") >= 0) midRow = drows[mi];
+      }
+      var r17 = midRow ? selectCopy((function () {
+        var r = document.createRange();
+        r.selectNode(midRow);
+        return r;
+      })()) : { html: "", text: "" };
+      // 负向子条件依赖 fixture: midRow 文本 "    val middle = a + b" 不含 "- " 子串.
+      check("T17 partial selection copies selection text",
+        r17.text.indexOf("val middle") >= 0 && r17.text.indexOf("- ") === -1 && r17.html.indexOf(">+ </span>") >= 0,
+        "text=" + JSON.stringify(r17.text.slice(0, 50)) + " html=" + r17.html.length);
+      var r18 = selectCopy((function () {
+        var r = document.createRange();
+        r.selectNodeContents(dbody);
+        return r;
+      })());
+      check("T18 full-cover selection copies whole diff",
+        r18.text.split("\n").length >= 5 && r18.text.indexOf("- ") >= 0 && r18.text.indexOf("+ ") >= 0,
+        "lines=" + r18.text.split("\n").length);
 
       // T13 抑制窗口到期恢复: 窗口过后宿主 writeText 必须恢复真实写入.
       // 真实症状: 消息"复制"按钮(宿主自己的 writeText 路径)全体静默失效 —
